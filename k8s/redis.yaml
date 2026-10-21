@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mini-ecommerce
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: mini-ecommerce
+        component: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+              name: redis
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 128Mi
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: redis-storage
+              mountPath: /data
+      volumes:
+        - name: redis-storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: redis
+spec:
+  type: ClusterIP  # Strictly internal to the cluster; not exposed publicly
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+  selector:
+    app: mini-ecommerce
+    component: redis

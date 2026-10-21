@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redis Cache & Cart Storage Service (Internal Only)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
+  # ---------------------------------------------------------------------------
+  # Python Flask REST API Backend Service
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecommerce-backend
+    restart: unless-stopped
+    environment:
+      - PORT=5000
+      - REDIS_HOST=redis          # Resolves via Compose user-defined network
+      - REDIS_PORT=6379
+      - ENABLE_TEST_LOAD=true     # Enabled for authorized local lab testing
+    ports:
+      - "5000:5000"               # Accessible for direct backend & load testing
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:5000/health/ready').getcode() == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # React + Vite Frontend (Served by Nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"                 # Exposes app to student host at http://localhost:8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:80/frontend-health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+# -----------------------------------------------------------------------------
+# User-Defined Bridge Network & Named Volumes
+# -----------------------------------------------------------------------------
+networks:
+  ecommerce-net:
+    name: ecommerce-net
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

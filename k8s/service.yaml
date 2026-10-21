@@ -1,0 +1,46 @@
+# ==============================================================================
+# Backend Internal Service (ClusterIP)
+# Accessible only within the Kubernetes cluster
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: 5000
+      name: http
+  selector:
+    app: mini-ecommerce
+    component: backend
+---
+# ==============================================================================
+# Frontend Service (LoadBalancer on AKS)
+# Provisions an external Azure Public IP for web browser access
+# ==============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: frontend
+spec:
+  # In Azure Kubernetes Service (AKS), type LoadBalancer automatically creates
+  # an Azure Public Load Balancer and assigns an external IP address.
+  # For local mini/kind clusters, ClusterIP with `kubectl port-forward` can also be used.
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  selector:
+    app: mini-ecommerce
+    component: frontend

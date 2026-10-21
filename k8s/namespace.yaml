@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: focc-ecommerce
+  labels:
+    app.kubernetes.io/name: mini-ecommerce
+    app.kubernetes.io/part-of: focc-lab2

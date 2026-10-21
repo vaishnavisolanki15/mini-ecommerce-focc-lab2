@@ -1,0 +1,133 @@
+# ==============================================================================
+# Backend Deployment (Flask REST API + Prometheus Metrics)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: backend
+spec:
+  # Initial replica count (HPA will scale between 1 and 5)
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: mini-ecommerce
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: mini-ecommerce
+        component: backend
+    spec:
+      containers:
+        - name: backend
+          # PLACEHOLDER: Replace <ACR_NAME> with your Azure Container Registry name
+          image: <ACR_NAME>.azurecr.io/focc-backend:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          # Resource requests and limits (Mandatory for CPU-based HPA scaling)
+          resources:
+            requests:
+              cpu: 100m       # 0.1 CPU core baseline
+              memory: 128Mi   # 128 Megabytes baseline
+            limits:
+              cpu: 500m       # 0.5 CPU core ceiling
+              memory: 256Mi   # 256 Megabytes ceiling
+          # Probes
+          # Startup probe allows slow initialization before liveness starts checking
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 2
+            failureThreshold: 30
+          # Liveness probe restarts deadlocked or crashed processes
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 5000
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # Readiness probe ensures Redis connection is operational before receiving traffic
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 5000
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+---
+# ==============================================================================
+# Frontend Deployment (React + Vite served via Nginx)
+# ==============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: focc-ecommerce
+  labels:
+    app: mini-ecommerce
+    component: frontend
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: mini-ecommerce
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: mini-ecommerce
+        component: frontend
+    spec:
+      containers:
+        - name: frontend
+          # PLACEHOLDER: Replace <ACR_NAME> with your Azure Container Registry name
+          image: <ACR_NAME>.azurecr.io/focc-frontend:v1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /frontend-health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /frontend-health
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
