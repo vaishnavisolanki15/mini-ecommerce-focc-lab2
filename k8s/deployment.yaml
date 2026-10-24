@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Backend Deployment (Flask REST API + Prometheus Metrics)
 # ==============================================================================
 apiVersion: apps/v1
@@ -30,7 +30,7 @@ spec:
       containers:
         - name: backend
           # PLACEHOLDER: Replace <ACR_NAME> with your Azure Container Registry name
-          image: <ACR_NAME>.azurecr.io/focc-backend:v1.0.0
+          image: vaishnavi10221743.azurecr.io/mini-ecommerce-backend:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
@@ -103,7 +103,7 @@ spec:
       containers:
         - name: frontend
           # PLACEHOLDER: Replace <ACR_NAME> with your Azure Container Registry name
-          image: <ACR_NAME>.azurecr.io/focc-frontend:v1.0.0
+          image: vaishnavi10221743.azurecr.io/mini-ecommerce-frontend:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
@@ -131,3 +131,4 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 2
+
