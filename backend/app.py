@@ -17,6 +17,7 @@ import hashlib
 from datetime import datetime
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
+# pyrefly: ignore[missing-import]
 import redis
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
